@@ -1,0 +1,35 @@
+name: PC Virtual
+
+on:
+  workflow_dispatch:
+
+jobs:
+  pc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Instalar Desktop e VNC
+        run: |
+          sudo apt update
+          sudo apt install -y xfce4 xfce4-terminal tigervnc-standalone-server novnc websockify
+          mkdir -p ~/.vnc
+          echo "123456" | vncpasswd -f > ~/.vnc/passwd
+          chmod 600 ~/.vnc/passwd
+
+      - name: Iniciar PC Virtual
+        run: |
+          vncserver :1 -geometry 1280x720 -depth 24
+          websockify --web /usr/share/novnc/ 6080 localhost:5901 &
+          echo "PC LIGADO!"
+
+      - name: Criar link de acesso com Ngrok
+        run: |
+          curl -s https://ngrok.com/download | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install ngrok -y
+          ngrok config add-authtoken SEU_TOKEN_AQUI
+          ngrok http 6080 --log stdout > ngrok.log &
+          sleep 5
+          cat ngrok.log | grep -o 'https://.*\.ngrok-free.app'
+
+      - name: Manter ligado por 6 horas
+        run: sleep 21600
